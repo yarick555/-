@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// Вторая задача с базой данных
+// Третья задача CRUD
 // Переменная для хранения
 var DB *gorm.DB
 
@@ -57,7 +57,55 @@ func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Создали успешно
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(task)
+}
+
+// PATCH
+func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	var task Task
+	if err := DB.First(&task, id).Error; err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	// Декодируем
+	var updatedTask Task
+	if err := json.NewDecoder(r.Body).Decode(&updatedTask); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Обновляем поля
+	if updatedTask.Task != "" {
+		task.Task = updatedTask.Task
+	}
+	task.IsDone = updatedTask.IsDone
+
+	if err := DB.Save(&task).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(task)
+}
+
+// DELETE
+func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	if err := DB.Delete(&Task{}, id).Error; err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func main() {
@@ -70,6 +118,8 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/tasks", GetTasksHandler).Methods("GET")
 	router.HandleFunc("/api/tasks", CreateTaskHandler).Methods("POST")
+	router.HandleFunc("/api/tasks/{id}", UpdateTaskHandler).Methods("PATCH")
+	router.HandleFunc("/api/tasks/{id}", DeleteTaskHandler).Methods("DELETE")
 
 	// Запускаем сервер
 	http.ListenAndServe(":8080", router)
