@@ -1,11 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
-	"github.com/gorilla/mux"
-	"net/http"
+	"context"
+	"errors"
 	"project/internal/taskService" // Импортируем наш сервис
-	"strconv"
+	"project/internal/web/tasks"
 )
 
 type Handler struct {
@@ -19,82 +18,100 @@ func NewHandler(service *taskService.TaskService) *Handler {
 	}
 }
 
-// GetTasksHandler возвращает все задачи
-func (h *Handler) GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.Service.GetAllTasks()
+func (h *Handler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	// Получение всех задач из сервиса
+	allTasks, err := h.Service.GetAllTasks()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	// Создаем переменную респон типа 200джейсонРеспонс
+	response := tasks.GetTasks200JSONResponse{}
+
+	// Заполняем слайс response всеми задачами из БД
+	for _, tsk := range allTasks {
+		task := tasks.Task{
+			Id:     &tsk.ID,     // Добавляем ID
+			Task:   &tsk.Task,   // Добавляем Task
+			IsDone: &tsk.IsDone, // Добавляем IsDone
+		}
+		response = append(response, task)
+	}
+
+	// Возвращаем ответ
+	return response, nil
 }
 
-// PostTaskHandler создает новую задачу
-func (h *Handler) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var task taskService.Task
-	err := json.NewDecoder(r.Body).Decode(&task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+	// Проверяем, что поле Task не nil
+	if request.Body.Task == nil {
+		return nil, errors.New("task field is required")
 	}
 
-	createdTask, err := h.Service.CreateTask(task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	// Создаем задачу с полем Task и IsDone по умолчанию (false)
+	taskToCreate := taskService.Task{
+		Task:   *request.Body.Task,
+		IsDone: false, // По умолчанию задача не выполнена
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(createdTask)
+	// Обращаемся к сервису и создаем задачу
+	createdTask, err := h.Service.CreateTask(taskToCreate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Создаем структуру ответа
+	response := tasks.PostTasks201JSONResponse{
+		Id:     &createdTask.ID,     // Возвращаем ID
+		Task:   &createdTask.Task,   // Возвращаем Task
+		IsDone: &createdTask.IsDone, // Возвращаем IsDone
+	}
+
+	// Возвращаем ответ
+	return response, nil
 }
 
-// UpdateTaskHandler обновляет задачу по ID
-func (h *Handler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	// Получаем ID задачи из URL
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
+// PatchTasksId обновляет задачу по её ID
+func (h *Handler) PatchTasksId(_ context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
+	// Получаем ID задачи из запроса
+	taskID := request.Id
+
+	// Получаем данные для обновления из тела запроса
+	taskUpdate := request.Body
+
+	// Создаем структуру для обновления задачи
+	updatedTask := taskService.Task{
+		Task:   *taskUpdate.Task,
+		IsDone: *taskUpdate.IsDone,
 	}
 
-	// Декодируем тело запроса в структуру Task
-	var task taskService.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	// Обновляем задачу в сервисе
+	updatedTask, err := h.Service.UpdateTaskByID(taskID, updatedTask)
+	if err != nil {
+		return nil, err
 	}
 
-	// Обновляем задачу
-	updatedTask, err := h.Service.UpdateTaskByID(uint(id), task)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	// Создаем структуру ответа
+	response := tasks.PatchTasksId200JSONResponse{
+		Task:   &updatedTask.Task,
+		IsDone: &updatedTask.IsDone,
 	}
 
 	// Возвращаем обновленную задачу
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedTask)
+	return response, nil
 }
 
-// DeleteTaskHandler удаляет задачу по ID
-func (h *Handler) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
-	// Получаем ID задачи из URL
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+// DeleteTasksId удаляет задачу по её ID
+func (h *Handler) DeleteTasksId(_ context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+	// Получаем ID задачи из запроса
+	taskID := request.Id
+
+	// Удаляем задачу в сервисе
+	err := h.Service.DeleteTaskByID(taskID)
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
-	// Удаляем задачу
-	if err := h.Service.DeleteTaskByID(uint(id)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Возвращаем статус 204 (No Content)
-	w.WriteHeader(http.StatusNoContent)
+	// Возвращаем пустой ответ с кодом 204 (No Content)
+	return tasks.DeleteTasksId204Response{}, nil
 }

@@ -36,6 +36,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Task'
 
+  /tasks/{id}:
+    patch:
+      summary: Update a task
+      tags:
+        - tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint
+      requestBody:
+        description: The task data to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: The updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+    delete:
+      summary: Delete a task
+      tags:
+        - tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint
+      responses:
+        '204':
+          description: Task deleted successfully
+        '404':
+          description: Task not found
+
 components:
   schemas:
     Task:
@@ -47,4 +92,11 @@ components:
         task:
           type: string
         is_done:
-          type: bool
+          type: boolean
+    TaskUpdate:
+      type: object
+      properties:
+        task:
+          type: string
+        is_done:
+          type: boolean
