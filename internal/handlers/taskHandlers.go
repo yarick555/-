@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"project/internal/taskService" // Импортируем наш сервис
 	"project/internal/web/tasks"
 )
@@ -26,48 +25,43 @@ func (h *Handler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (ta
 	}
 
 	// Создаем переменную респон типа 200джейсонРеспонс
+	// Которую мы потом передадим в качестве ответа
 	response := tasks.GetTasks200JSONResponse{}
 
 	// Заполняем слайс response всеми задачами из БД
 	for _, tsk := range allTasks {
 		task := tasks.Task{
-			Id:     &tsk.ID,     // Добавляем ID
-			Task:   &tsk.Task,   // Добавляем Task
-			IsDone: &tsk.IsDone, // Добавляем IsDone
+			Id:     &tsk.ID,
+			Task:   &tsk.Text,
+			IsDone: &tsk.IsDone,
 		}
 		response = append(response, task)
 	}
 
-	// Возвращаем ответ
+	// САМОЕ ПРЕКРАСНОЕ. Возвращаем просто респонс и nil!
 	return response, nil
 }
 
 func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
-	// Проверяем, что поле Task не nil
-	if request.Body.Task == nil {
-		return nil, errors.New("task field is required")
-	}
-
-	// Создаем задачу с полем Task и IsDone по умолчанию (false)
-	taskToCreate := taskService.Task{
-		Task:   *request.Body.Task,
-		IsDone: false, // По умолчанию задача не выполнена
-	}
-
+	// Распаковываем тело запроса напрямую, без декодера!
+	taskRequest := request.Body
 	// Обращаемся к сервису и создаем задачу
+	taskToCreate := taskService.Task{
+		Text:   *taskRequest.Task,
+		IsDone: *taskRequest.IsDone,
+	}
 	createdTask, err := h.Service.CreateTask(taskToCreate)
+
 	if err != nil {
 		return nil, err
 	}
-
-	// Создаем структуру ответа
+	// создаем структуру респонс
 	response := tasks.PostTasks201JSONResponse{
-		Id:     &createdTask.ID,     // Возвращаем ID
-		Task:   &createdTask.Task,   // Возвращаем Task
-		IsDone: &createdTask.IsDone, // Возвращаем IsDone
+		Id:     &createdTask.ID,
+		Task:   &createdTask.Text,
+		IsDone: &createdTask.IsDone,
 	}
-
-	// Возвращаем ответ
+	// Просто возвращаем респонс!
 	return response, nil
 }
 
@@ -81,7 +75,8 @@ func (h *Handler) PatchTasksId(_ context.Context, request tasks.PatchTasksIdRequ
 
 	// Создаем структуру для обновления задачи
 	updatedTask := taskService.Task{
-		Task:   *taskUpdate.Task,
+		ID:     taskID,
+		Text:   *taskUpdate.Task,
 		IsDone: *taskUpdate.IsDone,
 	}
 
@@ -93,7 +88,8 @@ func (h *Handler) PatchTasksId(_ context.Context, request tasks.PatchTasksIdRequ
 
 	// Создаем структуру ответа
 	response := tasks.PatchTasksId200JSONResponse{
-		Task:   &updatedTask.Task,
+		Id:     &updatedTask.ID,
+		Task:   &updatedTask.Text,
 		IsDone: &updatedTask.IsDone,
 	}
 
