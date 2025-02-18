@@ -24,7 +24,7 @@ func (h *Handler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (ta
 		return nil, err
 	}
 
-	// Создаем переменную респон типа 200джейсонРеспонс
+	// Создаем переменную респонс типа 200джейсонРеспонс
 	// Которую мы потом передадим в качестве ответа
 	response := tasks.GetTasks200JSONResponse{}
 
