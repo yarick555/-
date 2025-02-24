@@ -1,5 +1,7 @@
 package userService
 
+import "project/internal/taskService"
+
 type UserService struct {
 	Repo *UserRepository
 }
@@ -25,4 +27,10 @@ func (s *UserService) UpdateUser(id uint, email, password string) error {
 
 func (s *UserService) DeleteUser(id uint) error {
 	return s.Repo.DeleteUser(id)
+}
+
+func (s *UserService) GetTasksForUser(userID uint) ([]taskService.Task, error) {
+	var tasks []taskService.Task
+	err := s.Repo.DB.Where("user_id = ?", userID).Find(&tasks).Error
+	return tasks, err
 }

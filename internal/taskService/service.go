@@ -27,3 +27,8 @@ func (s *TaskService) UpdateTaskByID(id uint, task Task) (Task, error) {
 func (s *TaskService) DeleteTaskByID(id uint) error {
 	return s.repo.DeleteTaskByID(id)
 }
+
+// GetTasksForUser возвращает все задачи для конкретного пользователя
+func (s *TaskService) GetTasksForUser(userID uint) ([]Task, error) {
+	return s.repo.GetTasksForUser(userID)
+}

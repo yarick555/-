@@ -159,6 +159,28 @@ paths:
         '404':
           description: User not found
 
+  /users/{id}/tasks:
+    get:
+      summary: Get all tasks for a specific user
+      tags:
+        - tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint
+      responses:
+        '200':
+          description: A list of tasks for the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
 components:
   schemas:
     Task:
@@ -171,6 +193,9 @@ components:
           type: string
         is_done:
           type: boolean
+        user_id:
+          type: integer
+          format: uint
     TaskUpdate:
       type: object
       properties:

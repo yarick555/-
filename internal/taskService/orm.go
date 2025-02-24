@@ -8,4 +8,5 @@ type Task struct {
 	IsDone bool   `json:"is_done"`
 	ID     uint   `json:"id"`
 	Text   string `json:"text"`
+	UserID uint   `json:"user_id"`
 }
